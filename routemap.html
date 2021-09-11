@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css"
+        integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
+    <title>LatLng- File Upload</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.16.2/xlsx.full.min.js"></script>
+
+    <style>
+        /* Always set the map height explicitly to define the size of the div
+   * element that contains the map. */
+        #map {
+            height: 80%;
+        }
+
+        /* Optional: Makes the sample page fill the window. */
+        html,
+        body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
+        #floating-panel {
+            position: absolute;
+            top: 10px;
+            left: 25%;
+            z-index: 5;
+            background-color: #fff;
+            padding: 5px;
+            border: 1px solid #999;
+            text-align: center;
+            font-family: 'Roboto', 'sans-serif';
+            line-height: 30px;
+            padding-left: 10px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- <div id="floating-panel"></div> -->
+
+    <div id="map"></div>
+    <div class="conatiner mt-5">
+        <div class="row">
+            <div class="col-md-3">
+                <input class="form-control" type="file" id="input" accept=".xls,.xlsx">
+
+            </div>
+            <div class="col-md-2">
+                <button class="btn btn-primary" id="button">Submit</button>
+            </div>
+
+        </div>
+    </div>
+
+
+
+
+
+
+
+
+
+
+    <script>
+
+        let locations = [];
+        var xclcord = [];
+        let myPolygon;
+        let selectedFile;
+
+        function initMap() {
+
+            var map = new google.maps.Map(document.getElementById('map'), {
+                zoom: 12,
+                center: { lat: 19.74286, lng: 75.19394 }
+            });
+
+            marker = new google.maps.Marker({
+                map: map,
+                draggable: true,
+                animation: google.maps.Animation.DROP,
+                position: { lat: 19.74286, lng: 75.19394 }
+            });
+            const lineSymbol = {
+                path: google.maps.SymbolPath.CIRCLE,
+                scale: 8,
+                strokeColor: "#393",
+            };
+           
+
+
+
+           
+            document.getElementById('input').addEventListener("change", (event) => {
+                selectedFile = event.target.files[0];
+            })
+
+            let data = [{
+                "name": "jayanth",
+                "data": "scd",
+                "abc": "sdef"
+            }]
+
+
+            document.getElementById('button').addEventListener("click", () => {
+                XLSX.utils.json_to_sheet(data, 'out.xlsx');
+                if (selectedFile) {
+                    let fileReader = new FileReader();
+                    fileReader.readAsBinaryString(selectedFile);
+                    fileReader.onload = (event) => {
+                        let data = event.target.result;
+                        let workbook = XLSX.read(data, { type: "binary" });
+                        console.log(workbook);
+                        workbook.SheetNames.forEach(sheet => {
+                            let rowObject = XLSX.utils.sheet_to_row_object_array(workbook.Sheets[sheet]);
+                            // console.log(rowObject);
+                            // document.getElementById("jsondata").innerHTML = JSON.stringify(rowObject, undefined, 4)
+                            xclcord = rowObject;
+                            // document.getElementById('end').value = xclcord[0].latitude;
+                            DisplayPoint(map);
+                        });
+                    }
+                }
+            });
+            
+              
+
+                
+
+            function show_markers() {
+
+                for (var i = 0; i < locations.length; i++) {
+
+                    marker = new google.maps.Marker({
+                        position: locations[i],
+                        map: map
+                    });
+
+                }
+
+            }
+
+            function DisplayPoint(map) {
+
+                for (var i = 0; i < xclcord.length; i++) {
+                    var loc = xclcord[i].latitude
+                    var loc1 = xclcord[i].longitude
+                    var lat = parseFloat(loc)
+                    var lng = parseFloat(loc1)
+                    pos = new google.maps.LatLng(lat, lng)
+                    
+                    locations.push(pos);
+                }
+
+                myPolygon = new google.maps.Polyline({
+                    path: locations,
+                    strokeColor: "#000000",
+                    strokeOpacity: 0.9,
+                    strokeWeight: 5,
+
+                });
+                myPolygon.setMap(map);
+
+                // Create the polyline and add the symbol to it via the 'icons' property.
+                // const line = new google.maps.Polyline({
+                //     path: locations,
+                //     icons: [
+                //         {
+                //             icon: lineSymbol,
+                //             offset: "100%",
+                //         },
+                //     ],
+                //     map: map,
+                // });
+
+                // animateCircle(line);
+
+
+
+                var latLng = new google.maps.LatLng(xclcord[0].latitude, xclcord[0].longitude);
+
+                map.panTo(latLng);
+                marker.setPosition(latLng);
+                map.setCenter(latLng);
+                map.setZoom(10);
+
+                show_markers();
+
+                // document.getElementById('end').innerHTML = locations;
+
+            }
+
+
+
+            // function animateCircle(line) {
+            //     let count = 0;
+            //     // fallback icon if the poly has no icon to animate
+            //     var defaultIcon = [
+            //         {
+            //             icon: lineSymbol,
+            //             offset: '100%'
+            //         }
+            //     ];
+            //     handle = window.setInterval(function () {
+            //         if ((count + 1) == 200)
+            //             window.clearInterval(handle);
+            //         count = (count + 1) % 200;
+            //         var icons = line.get('icons') || defaultIcon;
+            //         icons[0].offset = (count / 2) + '%';
+            //         line.set('icons', icons);
+            //     }, 26);
+            // }
+        }
+
+
+
+
+    </script>
+    <script async defer
+        src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDTmeN51E060gamPWGSxWKuZQQy49KQFHw&callback=initMap&libraries=places">
+        </script>
+
+</body>
+
+</html>
